@@ -299,7 +299,7 @@ def generateColor(metaPath):
 def main(argv):
 
     # server settings
-    ip_addr = "10.169.49.4"
+    ip_addr = "10.169.34.141"
     port_num = 8889
     print("Connnecting to Server ...")
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -434,6 +434,10 @@ def main(argv):
                 x, y, z = getObjectDepth(depth, bounds)
                 distance = math.sqrt(x * x + y * y + z * z)
                 # distance = "{:.2f}".format(distance)
+                # Detect only in our lane line
+                # if( ((xCoord + yCoord) > 320) & (xCoord < 960) ):
+                
+                # Detect the center 1/3 of the image
                 if( (xCoord > 320) & (xCoord < 960) ):
                     
                     if (distance <= closest_distance):
@@ -446,16 +450,13 @@ def main(argv):
                 else:
                     print("Obstacle Outside Our Lane")
                 
-		# send closest_distance
-                # client_socket.send("Obstacle Detected! :\r\n".encode("utf-8"))
-                timestamp = str( datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S') )
-
-                msg = timestamp+","+str(label)+","+str(round(confidence*100,1))+","+str(round(closest_distance, 1))+",\r"
-                client_socket.send(msg.encode("utf-8"))
-
                 cv2.rectangle(image, (xCoord-thickness, yCoord-thickness), (xCoord + xEntent+thickness, yCoord+(18 +thickness*4)), color_array[detection[3]], -1)
                 cv2.putText(image, label + " " +  (str(distance) + " m"), (xCoord+(thickness*4), yCoord+(10 +thickness*4)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2)
                 cv2.rectangle(image, (xCoord-thickness, yCoord-thickness), (xCoord + xEntent+thickness, yCoord + yExtent+thickness), color_array[detection[3]], int(thickness*2))
+
+            timestamp = str( datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S') )
+            msg = timestamp+","+str(label)+","+str(round(confidence*100,1))+","+str(round(closest_distance, 1))+",\r"
+            client_socket.send(msg.encode("utf-8"))
 
 
             cv2.imshow("ZED", image)
