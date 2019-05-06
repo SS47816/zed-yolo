@@ -299,7 +299,7 @@ def generateColor(metaPath):
 def main(argv):
 
     # server settings
-    ip_addr = "10.169.34.141"
+    ip_addr = "192.168.1.142"
     port_num = 8889
     print("Connnecting to Server ...")
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -415,7 +415,9 @@ def main(argv):
             
             # initialize closest distance
             closest_distance = 25 # default 25m
-
+            label = "no nothing"
+            confidence = 0.0
+            
             print(chr(27) + "[2J"+"**** " +
                   str(len(detections)) + " Results ****")
             for detection in detections:
@@ -436,7 +438,7 @@ def main(argv):
                 # distance = "{:.2f}".format(distance)
                 # Detect only in our lane line
                 # if( ((xCoord + yCoord) > 320) & (xCoord < 960) ):
-                
+                timestamp = str( datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S') )
                 # Detect the center 1/3 of the image
                 if( (xCoord > 320) & (xCoord < 960) ):
                     
@@ -454,7 +456,7 @@ def main(argv):
                 cv2.putText(image, label + " " +  (str(distance) + " m"), (xCoord+(thickness*4), yCoord+(10 +thickness*4)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2)
                 cv2.rectangle(image, (xCoord-thickness, yCoord-thickness), (xCoord + xEntent+thickness, yCoord + yExtent+thickness), color_array[detection[3]], int(thickness*2))
 
-            timestamp = str( datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S') )
+            
             msg = timestamp+","+str(label)+","+str(round(confidence*100,1))+","+str(round(closest_distance, 1))+",\r"
             client_socket.send(msg.encode("utf-8"))
 
