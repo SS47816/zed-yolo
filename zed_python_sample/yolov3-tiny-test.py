@@ -22,6 +22,8 @@ import statistics
 import sys
 import getopt
 from random import randint
+# for server
+import socket
 import datetime
 import time
 
@@ -296,6 +298,15 @@ def generateColor(metaPath):
 
 def main(argv):
 
+    # server settings
+    ip_addr = "10.169.49.4"
+    port_num = 8889
+    print("Connnecting to Server ...")
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((ip_addr, port_num))
+    print("Server Connected")
+    # end of server settings
+
     thresh = 0.25
     darknet_path="../libdarknet/"
     configPath = darknet_path + "cfg/yolov3-tiny.cfg"
@@ -401,6 +412,9 @@ def main(argv):
 
             # Do the detection
             detections = detect(netMain, metaMain, image, thresh)
+            
+            # initialize closest distance
+            closest_distance = 25 # default 25m
 
             print(chr(27) + "[2J"+"**** " +
                   str(len(detections)) + " Results ****")
@@ -408,9 +422,7 @@ def main(argv):
                 label = detection[0]
                 confidence = detection[1]
                 pstring = label+": "+str(np.rint(100 * confidence))+"%"
-                print(pstring)
-                timestamp = str( datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S') )
-                print(timestamp)
+                #print(pstring)
                 bounds = detection[2]
                 yExtent = int(bounds[3])
                 xEntent = int(bounds[2])
@@ -421,10 +433,30 @@ def main(argv):
                 thickness = 1
                 x, y, z = getObjectDepth(depth, bounds)
                 distance = math.sqrt(x * x + y * y + z * z)
-                distance = "{:.2f}".format(distance)
+                # distance = "{:.2f}".format(distance)
+                if( (xCoord > 320) & (xCoord < 960) ):
+                    
+                    if (distance <= closest_distance):
+                        closest_distance = distance
+
+                    print("Obstacle Detected! :")
+                    print(timestamp+" "+str(label)+" "+str(round(confidence*100,1))+"% "+str(xCoord)+" "+str(yCoord)+" "+str(round(distance, 1))+"m\n")
+                    # msg = timestamp+","+str(label)+","+str(round(confidence*100,1))+","+distance+",\r"
+                    
+                else:
+                    print("Obstacle Outside Our Lane")
+                
+		# send closest_distance
+                # client_socket.send("Obstacle Detected! :\r\n".encode("utf-8"))
+                timestamp = str( datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S') )
+
+                msg = timestamp+","+str(label)+","+str(round(confidence*100,1))+","+str(round(closest_distance, 1))+",\r"
+                client_socket.send(msg.encode("utf-8"))
+
                 cv2.rectangle(image, (xCoord-thickness, yCoord-thickness), (xCoord + xEntent+thickness, yCoord+(18 +thickness*4)), color_array[detection[3]], -1)
                 cv2.putText(image, label + " " +  (str(distance) + " m"), (xCoord+(thickness*4), yCoord+(10 +thickness*4)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2)
                 cv2.rectangle(image, (xCoord-thickness, yCoord-thickness), (xCoord + xEntent+thickness, yCoord + yExtent+thickness), color_array[detection[3]], int(thickness*2))
+
 
             cv2.imshow("ZED", image)
             key = cv2.waitKey(5)
