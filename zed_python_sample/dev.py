@@ -22,6 +22,7 @@ import statistics
 import sys
 import getopt
 from random import randint
+# Modification: add headers
 import time
 
 def sample(probs):
@@ -293,11 +294,25 @@ def generateColor(metaPath):
         color_array.append((randint(0, 255), randint(0, 255), randint(0, 255)))
     return color_array
 
-def print_fps_and_update_time(previous_timestamp):
+# Modification: add fps and update time function
+def printFPSUpdateTime(previous_timestamp):
     timestamp = time.time()
     fps = 1.0/(timestamp - previous_timestamp)
     print("Current FPS: ", round(fps, 2))
     return timestamp
+
+# Modification: add filter obstacles outside lane
+def filterObstacles(pixel_x, pixel_y, distance):
+    half_w = 640 # half of the image width in pixels
+    half_h = 360 # half of the image height in pixels
+    camera_focal_length = 700 # in pixels
+    theta = math.atan2( abs(x - half_x)/camera_focal_length )
+    x = distance * math.cos(theta) # longitudinal position of the object
+    y = distance * math.sin(theta) # longitudinal position of the object
+    if(y > -1 and y < 1):
+        return true
+    else: 
+        return false
 
 def main(argv):
 
@@ -392,7 +407,6 @@ def main(argv):
     color_array = generateColor(metaPath)
 
     print("Running...")
-    timestamp = 0.0
 
     key = ''
     while key != 113:  # for 'q' key
@@ -404,6 +418,10 @@ def main(argv):
             cam.retrieve_measure(
                 point_cloud_mat, sl.MEASURE.MEASURE_XYZRGBA)
             depth = point_cloud_mat.get_data()
+            
+            # Modification: get/update the timestamp
+            timestamp = printFPSUpdateTime(timestamp)
+            
 
             # Do the detection
             detections = detect(netMain, metaMain, image, thresh)
@@ -426,12 +444,16 @@ def main(argv):
                 x, y, z = getObjectDepth(depth, bounds)
                 distance = math.sqrt(x * x + y * y + z * z)
                 distance = "{:.2f}".format(distance)
+
+                # Modification: filter out the objects outside of the straight lane
+                filter_flag = filterObstacles(pixel_x, pixel_y, distance):
+
                 cv2.rectangle(image, (xCoord-thickness, yCoord-thickness), (xCoord + xEntent+thickness, yCoord+(18 +thickness*4)), color_array[detection[3]], -1)
                 cv2.putText(image, label + " " +  (str(distance) + " m"), (xCoord+(thickness*4), yCoord+(10 +thickness*4)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2)
                 cv2.rectangle(image, (xCoord-thickness, yCoord-thickness), (xCoord + xEntent+thickness, yCoord + yExtent+thickness), color_array[detection[3]], int(thickness*2))
 
             cv2.imshow("ZED", image)
-            timestamp = print_fps_and_update_time(timestamp)
+            
             key = cv2.waitKey(5)
         else:
             key = cv2.waitKey(5)

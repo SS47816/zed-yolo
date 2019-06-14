@@ -295,6 +295,12 @@ def generateColor(metaPath):
         color_array.append((randint(0, 255), randint(0, 255), randint(0, 255)))
     return color_array
 
+def print_fps_and_update_time(previous_timestamp):
+    timestamp = time.time()
+    fps = 1.0/(timestamp - previous_timestamp)
+    print("Current FPS: ", round(fps, 2))
+    return timestamp
+
 
 def main(argv):
 
