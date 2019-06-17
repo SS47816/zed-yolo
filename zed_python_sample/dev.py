@@ -24,6 +24,7 @@ import getopt
 from random import randint
 # Modification: add headers
 import time
+import datetime
 
 def sample(probs):
     s = sum(probs)
@@ -306,13 +307,13 @@ def filterObstacles(pixel_x, pixel_y, distance):
     half_w = 640 # half of the image width in pixels
     half_h = 360 # half of the image height in pixels
     camera_focal_length = 700 # in pixels
-    theta = math.atan2( abs(x - half_x)/camera_focal_length )
+    theta = math.atan2( abs(pixel_x - half_w), camera_focal_length )
     x = distance * math.cos(theta) # longitudinal position of the object
     y = distance * math.sin(theta) # longitudinal position of the object
     if(y > -1 and y < 1):
-        return true
+        return True
     else: 
-        return false
+        return False
 
 def main(argv):
 
@@ -322,6 +323,7 @@ def main(argv):
     weightPath = darknet_path + "yolov3-tiny.weights"
     metaPath = "coco.data"
     svoPath = None
+    timestamp = 0
 
     help_str = 'darknet_zed.py -c <config> -w <weight> -m <meta> -t <threshold> -s <svo_file>'
     try:
@@ -421,7 +423,7 @@ def main(argv):
             
             # Modification: get/update the timestamp
             timestamp = printFPSUpdateTime(timestamp)
-            
+            time_for_print = str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S') )
 
             # Do the detection
             detections = detect(netMain, metaMain, image, thresh)
@@ -443,12 +445,26 @@ def main(argv):
                 thickness = 1
                 x, y, z = getObjectDepth(depth, bounds)
                 distance = math.sqrt(x * x + y * y + z * z)
-                distance = "{:.2f}".format(distance)
+                distance = round(distance, 1)
 
                 # Modification: filter out the objects outside of the straight lane
-                filter_flag = filterObstacles(pixel_x, pixel_y, distance):
-
-                cv2.rectangle(image, (xCoord-thickness, yCoord-thickness), (xCoord + xEntent+thickness, yCoord+(18 +thickness*4)), color_array[detection[3]], -1)
+                is_in_our_lane = filterObstacles(xCoord, yCoord, distance)
+                
+                # Modification: if else cases
+                if (is_in_our_lane):
+                    warning_color = (0, 0, 255) # red
+                    print("Obstacles in Our Lane:")
+                    print(time_for_print +" "+str(label)+" "+str(round(confidence*100,1))+"% "+str(xCoord)+" "+str(yCoord)+" "+str(distance)+"m\n")
+                    cv2.rectangle(image, (xCoord-thickness, yCoord-thickness), (xCoord + xEntent+thickness, yCoord+(18 +thickness*4)), (0, 0, 255), -1)
+                
+                else:
+                    warning_color = (0, 255, 0) # green
+                    print("Obstacles Out of Our Lane")
+                    
+                
+                # Modification: show the warning color on the image
+                cv2.rectangle(image, (xCoord-thickness, yCoord-thickness), (xCoord + xEntent+thickness, yCoord+(18 +thickness*4)), warning_color, -1)
+                # cv2.rectangle(image, (xCoord-thickness, yCoord-thickness), (xCoord + xEntent+thickness, yCoord+(18 +thickness*4)), color_array[detection[3]], -1)
                 cv2.putText(image, label + " " +  (str(distance) + " m"), (xCoord+(thickness*4), yCoord+(10 +thickness*4)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2)
                 cv2.rectangle(image, (xCoord-thickness, yCoord-thickness), (xCoord + xEntent+thickness, yCoord + yExtent+thickness), color_array[detection[3]], int(thickness*2))
 
